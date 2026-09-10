@@ -50,6 +50,11 @@ app.use(
     autoLogging: {
       ignore: (req) => req.url === "/health",
     },
+    redact: [
+      "req.headers.cookie",
+      "req.headers.authorization",
+      "res.headers['set-cookie']",
+    ],
   })
 );
 
