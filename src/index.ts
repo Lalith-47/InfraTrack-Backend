@@ -12,6 +12,7 @@ import { authRateLimiter } from "./middleware/rateLimiter.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { meRouter } from "./routes/me.js";
 import { projectsRouter } from "./routes/projects.js";
+import { dashboardRouter } from "./routes/dashboard.js";
 
 const app = express();
 
@@ -91,6 +92,7 @@ app.use(express.urlencoded({ extended: true }));
 // Feature routes
 app.use("/api/me", meRouter);
 app.use("/api/projects", projectsRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // Centralized Error Handler
 app.use(errorHandler);

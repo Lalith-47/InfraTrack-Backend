@@ -1,6 +1,6 @@
 # SIH 2026 Infrastructure Monitoring — Backend API
 
-Production-ready, standalone TypeScript backend powered by Express, Prisma (PostgreSQL), and Better Auth for authentication (Email/Password + GitHub/Google OAuth).
+Production-ready, standalone TypeScript backend powered by Express, Prisma (PostgreSQL), and Better Auth for authentication with fine-grained Role-Based Access Control (RBAC: `ADMIN`, `SUPERVISOR`, `VIEWER`).
 
 ---
 
@@ -9,7 +9,7 @@ Production-ready, standalone TypeScript backend powered by Express, Prisma (Post
 - **Local Base URL**: `http://localhost:4000`
 - **Render Production Base URL**: `https://sih2026-backend.onrender.com` (or your assigned Render service domain)
 - **Auth Endpoint Prefix**: `/api/auth/*`
-- **Render Health Check Endpoint**: `GET /health`
+- **Health Check Endpoint**: `GET /health`
 
 ---
 
@@ -28,245 +28,292 @@ Production-ready, standalone TypeScript backend powered by Express, Prisma (Post
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth 2.0 Client ID | `123456...apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth 2.0 Client Secret | `GOCSPX-...` |
 
-> **Render Deployment Setup**:
-> In Render dashboard, set:
-> 1. `BETTER_AUTH_URL`: Your Render Web Service URL (e.g. `https://sih2026-backend.onrender.com`)
-> 2. `FRONTEND_URL`: Your deployed frontend URL (e.g. `https://sih2026.vercel.app`)
-> 3. `GITHUB_CLIENT_ID` & `GITHUB_CLIENT_SECRET`: From GitHub Developer Settings (Callback URL: `https://<backend-domain>/api/auth/callback/github`)
-> 4. `GOOGLE_CLIENT_ID` & `GOOGLE_CLIENT_SECRET`: From Google Cloud Console (Redirect URI: `https://<backend-domain>/api/auth/callback/google`)
-> Note: `DATABASE_URL` is automatically wired via `render.yaml`.
+---
+
+## 3. Seeded Accounts & Credentials for Testing / Audit
+
+| Email | Password | Role | Permissions |
+|---|---|---|---|
+| `admin@infra.gov.in` | `Password123!` | `ADMIN` | Global portfolio access, project creation (`POST /api/projects`), field updates, role simulation |
+| `supervisor@infra.gov.in` | `Password123!` | `SUPERVISOR` | Assigned project access, field updates (`POST /api/projects/:id/updates` via Excel, Text, Voice) |
+| `viewer@infra.gov.in` | `Password123!` | `VIEWER` | Read-only access to all dashboards, S-Curves, and telemetry feeds. (Mutations blocked with `403 Forbidden`) |
 
 ---
 
-## 3. Local Development Quickstart
+## 4. Complete API Endpoint Matrix
 
-1. **Prerequisites**: Node.js v20+, PostgreSQL running locally (e.g. via Docker: `docker run --name sih_postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=sih2026 -p 5432:5432 -d postgres:16-alpine`).
-2. **Install dependencies**:
-   ```bash
-   cd backend
-   npm install
-   ```
-3. **Configure environment**:
-   Copy `.env.example` to `.env` and verify credentials:
-   ```bash
-   cp .env.example .env
-   ```
-4. **Run migrations**:
-   ```bash
-   npm run prisma:migrate
-   ```
-5. **Start development server**:
-   ```bash
-   npm run dev
-   ```
-6. **Compile & start in production mode**:
-   ```bash
-   npm run build
-   npm start
-   ```
+### 4.1 System & Health
 
----
-
-## 4. Frontend Integration Guide (Next.js)
-
-### Important: CORS & Cookies
-Every request made from the frontend to protected backend routes must include credentials:
-```typescript
-fetch("http://localhost:4000/api/me", {
-  credentials: "include", // CRITICAL for session cookies
-});
-```
-
-### Setting up the Better Auth Client SDK
-
-1. Install `better-auth` in the frontend (`sih2026`):
-   ```bash
-   npm install better-auth
-   ```
-2. Create `src/lib/auth-client.ts`:
-   ```typescript
-   import { createAuthClient } from "better-auth/react";
-
-   export const authClient = createAuthClient({
-     baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000",
-     fetchOptions: {
-       credentials: "include",
-     },
-   });
-
-   export const { signIn, signUp, signOut, useSession } = authClient;
-   ```
-
-### 1. Email & Password Sign Up
-```typescript
-import { authClient } from "@/lib/auth-client";
-
-await authClient.signUp.email({
-  email: "engineer@infra.gov.in",
-  password: "SecurePassword123!",
-  name: "Rajesh Sharma",
-}, {
-  onSuccess: () => {
-    // Redirect or update UI
-    window.location.href = "/admin";
-  },
-  onError: (ctx) => {
-    alert(ctx.error.message);
+#### `GET /health`
+- **Auth Requirement**: Public (no auth required)
+- **Description**: Render uptime and container health probe.
+- **Response `200 OK`**:
+  ```json
+  {
+    "status": "ok",
+    "timestamp": "2026-09-10T06:30:00.000Z",
+    "uptime": 124.5
   }
-});
-```
-
-### 2. Email & Password Sign In
-```typescript
-import { authClient } from "@/lib/auth-client";
-
-await authClient.signIn.email({
-  email: "engineer@infra.gov.in",
-  password: "SecurePassword123!",
-}, {
-  onSuccess: () => {
-    window.location.href = "/admin";
-  },
-  onError: (ctx) => {
-    alert(ctx.error.message);
-  }
-});
-```
-
-### 3. Social OAuth (GitHub & Google)
-Trigger social login with automatic redirect back to your frontend:
-```typescript
-import { authClient } from "@/lib/auth-client";
-
-// GitHub OAuth
-await authClient.signIn.social({
-  provider: "github",
-  callbackURL: "http://localhost:3000/admin",
-});
-
-// Google OAuth
-await authClient.signIn.social({
-  provider: "google",
-  callbackURL: "http://localhost:3000/admin",
-});
-```
-
-### 4. Reading the Current User & Session State
-Use the React hook:
-```typescript
-import { authClient } from "@/lib/auth-client";
-
-export function UserBadge() {
-  const { data: session, isPending, error } = authClient.useSession();
-
-  if (isPending) return <div>Checking auth...</div>;
-  if (!session) return <a href="/login">Sign In</a>;
-
-  return (
-    <div>
-      <span>{session.user.name} ({session.user.email})</span>
-      <button onClick={() => authClient.signOut()}>Sign Out</button>
-    </div>
-  );
-}
-```
-
-Or query the protected `/api/me` route directly:
-```typescript
-const res = await fetch("http://localhost:4000/api/me", {
-  credentials: "include",
-});
-const { user, session } = await res.json();
-```
+  ```
 
 ---
 
-## 5. API Reference
+### 4.2 Authentication (`/api/auth/*`)
 
-### Health & Monitoring
-- **`GET /health`**
-  - **Auth**: None
-  - **Description**: Render liveness & database health check probe.
-  - **Response (200)**:
-    ```json
-    {
-      "status": "ok",
-      "database": "connected",
-      "uptime": 12.34,
-      "timestamp": "2026-09-10T00:00:00.000Z"
+Handled natively by Better Auth with session cookies (`credentials: "include"`).
+
+#### `POST /api/auth/sign-up/email`
+- **Auth Requirement**: Public
+- **Request Body**:
+  ```json
+  {
+    "email": "engineer@infra.gov.in",
+    "password": "Password123!",
+    "name": "Er. Arvind Kumar"
+  }
+  ```
+- **Response `200 OK`**: User profile with `Set-Cookie` session header. New accounts default to `SUPERVISOR` role.
+
+#### `POST /api/auth/sign-in/email`
+- **Auth Requirement**: Public
+- **Request Body**:
+  ```json
+  {
+    "email": "admin@infra.gov.in",
+    "password": "Password123!"
+  }
+  ```
+- **Response `200 OK`**: User profile with active session cookie.
+
+#### `POST /api/auth/sign-out`
+- **Auth Requirement**: Logged-in session
+- **Response `200 OK`**: Invalidates session in PostgreSQL and clears cookies.
+
+#### `GET /api/auth/get-session`
+- **Auth Requirement**: Public / Session Check
+- **Response `200 OK`**: `{ "session": { ... }, "user": { ... } }` or `null` if unauthenticated.
+
+#### `POST /api/auth/sign-in/social`
+- **Auth Requirement**: Public
+- **Request Body**:
+  ```json
+  {
+    "provider": "github" | "google",
+    "callbackURL": "http://localhost:3000/admin"
+  }
+  ```
+- **Response `200 OK`**: `{ "url": "https://github.com/login/oauth/authorize?..." }`
+
+---
+
+### 4.3 Officer Profile & Role Switching
+
+#### `GET /api/me`
+- **Auth Requirement**: Logged-in (`ADMIN`, `SUPERVISOR`, or `VIEWER`)
+- **Description**: Returns authenticated officer session details combined with real-time PostgreSQL `role`.
+- **Response `200 OK`**:
+  ```json
+  {
+    "user": {
+      "id": "usr_998124",
+      "name": "National System Administrator",
+      "email": "admin@infra.gov.in",
+      "role": "ADMIN",
+      "createdAt": "2026-09-10T00:41:39.000Z"
     }
-    ```
+  }
+  ```
+- **Response `401 Unauthorized`**: If session is absent or expired.
 
-### Authentication Endpoints (Mounted at `/api/auth/*`)
-- `POST /api/auth/sign-up/email` — Body: `{ email, password, name }`
-- `POST /api/auth/sign-in/email` — Body: `{ email, password }`
-- `POST /api/auth/sign-out` — Body: `{}` (with session cookie)
-- `GET /api/auth/get-session` — Returns active session object
-- `GET /api/auth/sign-in/social?provider=github|google` — Redirects to OAuth provider
+#### `PATCH /api/me/role`
+- **Auth Requirement**: Logged-in
+- **Description**: Updates the active user's role in PostgreSQL. Enables instant switching between `ADMIN`, `SUPERVISOR`, and `VIEWER` to test and demonstrate RBAC-scoped interfaces.
+- **Request Body**:
+  ```json
+  {
+    "role": "SUPERVISOR"
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "message": "Role updated to SUPERVISOR",
+    "user": {
+      "id": "usr_998124",
+      "email": "admin@infra.gov.in",
+      "role": "SUPERVISOR"
+    }
+  }
+  ```
 
-### User Profile
-- **`GET /api/me`**
-  - **Auth**: Required (`sih_auth.session_token` cookie)
-  - **Description**: Returns authenticated user profile and session metadata.
-  - **Response (200)**:
-    ```json
-    {
-      "user": {
-        "id": "cly12345",
-        "name": "Rajesh Sharma",
-        "email": "engineer@infra.gov.in",
-        "emailVerified": false,
-        "image": null,
-        "createdAt": "2026-09-10T00:00:00.000Z",
-        "updatedAt": "2026-09-10T00:00:00.000Z"
-      },
-      "session": {
-        "id": "sess_12345",
-        "userId": "cly12345",
-        "token": "...",
-        "expiresAt": "2026-09-17T00:00:00.000Z"
+---
+
+### 4.4 Dashboard Telemetry & Aggregations
+
+#### `GET /api/dashboard/stats`
+- **Auth Requirement**: Logged-in (`ADMIN`, `SUPERVISOR`, or `VIEWER`)
+- **Description**: Aggregates real-time portfolio statistics directly from PostgreSQL `Project` and `ActivityUpdate` tables.
+- **Response `200 OK`**:
+  ```json
+  {
+    "stats": {
+      "totalProjects": 4,
+      "onTrackCount": 3,
+      "delayedCount": 1,
+      "completedCount": 0,
+      "totalBudgetCr": 51200,
+      "avgProgress": 48.75,
+      "recentUpdates": [
+        {
+          "id": "upd_1001",
+          "channel": "EXCEL",
+          "notes": "Imported WBS spreadsheet. Section 2 earthworks finished.",
+          "progressDelta": 1.5,
+          "author": "Er. Arvind Kumar",
+          "role": "SUPERVISOR",
+          "createdAt": "2026-09-10T00:42:00.000Z"
+        }
+      ]
+    }
+  }
+  ```
+- **Response `401 Unauthorized`**: If session is missing.
+
+---
+
+### 4.5 Projects & Multi-Modal Field Updates
+
+#### `GET /api/projects`
+- **Auth Requirement**: Logged-in (`ADMIN`, `SUPERVISOR`, or `VIEWER`)
+- **Query Parameters**:
+  - `scope` (optional): `assigned` (filters to projects supervised by the current user when role is `SUPERVISOR`)
+- **Description**: Retrieves list of infrastructure projects with nested `timelinePoints` and `recentUpdates`.
+- **Response `200 OK`**:
+  ```json
+  {
+    "projects": [
+      {
+        "id": "PRJ-NH48-EXP",
+        "name": "Delhi-Mumbai Expressway Package 14",
+        "code": "NH-48-EXP",
+        "wbsCode": "WBS-1.1.4-HWY",
+        "department": "Ministry of Road Transport & Highways",
+        "category": "Transportation",
+        "location": "Vadodara-Kim Expressway Corridor",
+        "description": "8-lane access-controlled greenfield expressway stretch.",
+        "baselineStartDate": "2024-03-01T00:00:00.000Z",
+        "baselineEndDate": "2026-12-31T00:00:00.000Z",
+        "currentProgress": 68.5,
+        "plannedProgress": 65,
+        "status": "ON_TRACK",
+        "budget": "₹4,250 Cr",
+        "spent": "₹2,890 Cr",
+        "supervisor": "Er. Arvind Kumar",
+        "contractor": "Larsen & Toubro ECC",
+        "timelinePoints": [
+          { "period": "Q1-24", "planned": 15, "actual": 16 },
+          { "period": "Q2-24", "planned": 30, "actual": 32 }
+        ],
+        "recentUpdates": [
+          {
+            "id": "upd_nh48_1",
+            "channel": "EXCEL",
+            "notes": "Main carriageway asphalt paving completed.",
+            "progressDelta": 1.5,
+            "author": "Er. Arvind Kumar",
+            "role": "SUPERVISOR",
+            "createdAt": "2026-09-08T10:00:00.000Z",
+            "tags": ["#Paving", "#QualityPassed"]
+          }
+        ]
       }
-    }
-    ```
-  - **Response (401)**:
-    ```json
-    {
-      "error": "Unauthorized",
-      "message": "You must be authenticated to access this resource"
-    }
-    ```
+    ]
+  }
+  ```
 
-### Infrastructure Projects (SIH Domain)
-- **`GET /api/projects`**
-  - **Auth**: Optional
-  - **Query Params**: `status`, `department`, `search`
-  - **Response (200)**: `{ "projects": [ ... ] }`
+#### `POST /api/projects`
+- **Auth Requirement**: `ADMIN` role only (Enforced via `requireRole(["ADMIN"])` middleware)
+- **Description**: Creates a new project baseline in PostgreSQL.
+- **Request Body**:
+  ```json
+  {
+    "name": "Coastal Ring Road Expressway Phase II",
+    "code": "WBS-2.3.14-HWY",
+    "wbsCode": "WBS-2.3.14-HWY",
+    "department": "Ministry of Road Transport & Highways",
+    "category": "Transportation",
+    "location": "Pune-Nashik Corridor, MH",
+    "budget": "₹3,450 Cr",
+    "spent": "₹0 Cr",
+    "baselineStartDate": "2026-04-01T00:00:00.000Z",
+    "baselineEndDate": "2028-12-31T00:00:00.000Z",
+    "currentProgress": 0,
+    "plannedProgress": 5,
+    "status": "ON_TRACK",
+    "supervisor": "Er. Arvind Kumar",
+    "contractor": "National EPC Contractors Ltd",
+    "description": "Access-controlled expressway bypassing congested arterial corridors."
+  }
+  ```
+- **Response `201 Created`**: Returns `{ "message": "Project created successfully", "project": { ... } }`
+- **Response `403 Forbidden`**:
+  ```json
+  {
+    "error": "Forbidden: Requires one of the following roles: ADMIN. Your role: SUPERVISOR"
+  }
+  ```
 
-- **`POST /api/projects`**
-  - **Auth**: Required
-  - **Request Body**:
-    ```json
-    {
-      "name": "NH-44 Expressway Expansion",
-      "code": "NH44-PKG-02",
-      "wbsCode": "WBS-1.2.4",
-      "department": "National Highways Authority of India (NHAI)",
-      "category": "Roads & Highways",
-      "location": "Bengaluru - Hyderabad Corridor",
-      "description": "Widening 6-lane elevated highway corridor",
-      "baselineStartDate": "2026-01-15T00:00:00.000Z",
-      "baselineEndDate": "2027-12-31T00:00:00.000Z",
-      "currentProgress": 34.5,
-      "plannedProgress": 40.0,
-      "status": "AT_RISK",
-      "budget": "₹850 Cr",
-      "spent": "₹312 Cr",
-      "supervisor": "Er. Arvind Rao",
-      "contractor": "Larsen & Toubro Ltd."
+#### `GET /api/projects/:id`
+- **Auth Requirement**: Logged-in (`ADMIN`, `SUPERVISOR`, or `VIEWER`)
+- **Description**: Fetches single project details with all timeline coordinates and field activity logs.
+- **Response `200 OK`**: `{ "project": { ... } }`
+- **Response `404 Not Found`**: `{ "error": "Project not found" }`
+
+#### `POST /api/projects/:id/updates`
+- **Auth Requirement**: `ADMIN` or `SUPERVISOR` (Enforced via `requireRole(["ADMIN", "SUPERVISOR"])` middleware; `VIEWER` is rejected)
+- **Description**: Commits daily multi-modal progress updates (Excel, Text log, or Voice memo) to PostgreSQL. Automatically increments `project.currentProgress` by `progressDelta`, creates an `ActivityUpdate` row, and appends a new `TimelinePoint` coordinate for S-Curve visualization.
+- **Request Body**:
+  ```json
+  {
+    "channel": "VOICE",
+    "notes": "Pier segment 14 casting finished at 16:30. Curing compounds applied. Steel reinforcement inspections approved.",
+    "progressDelta": 1.2,
+    "author": "Site Supervisor",
+    "tags": ["#VoiceTranscription", "#SiteAudioMemo"]
+  }
+  ```
+- **Response `201 Created`**:
+  ```json
+  {
+    "message": "Progress update recorded successfully",
+    "update": {
+      "id": "upd_clp12345",
+      "channel": "VOICE",
+      "notes": "...",
+      "progressDelta": 1.2,
+      "author": "Site Supervisor",
+      "role": "SUPERVISOR",
+      "createdAt": "2026-09-10T06:35:00.000Z"
+    },
+    "project": {
+      "id": "PRJ-NH48-EXP",
+      "currentProgress": 69.7,
+      "status": "ON_TRACK"
     }
-    ```
-  - **Response (201)**: `{ "project": { ... } }`
+  }
+  ```
+- **Response `403 Forbidden`**: Returned if called by a `VIEWER`:
+  ```json
+  {
+    "error": "Forbidden: Requires one of the following roles: ADMIN, SUPERVISOR. Your role: VIEWER"
+  }
+  ```
 
-- **`GET /api/projects/:id`**
-  - **Auth**: Optional
-  - **Response (200)**: `{ "project": { ... } }`
+---
+
+## 5. Deployment Guide (Render)
+
+1. Push code to your Git repository.
+2. In Render, select **Blueprints** and point to `backend/render.yaml`.
+3. Provide environment variables (`BETTER_AUTH_SECRET`, `FRONTEND_URL`, OAuth keys if required).
+4. Render builds the service using `npm run build`, runs database migrations via `npm run prisma:migrate`, and executes `npm start`.

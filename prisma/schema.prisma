@@ -7,12 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  SUPERVISOR
+  VIEWER
+}
+
 model User {
   id            String    @id
   name          String
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  role          Role      @default(SUPERVISOR)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
@@ -78,31 +85,70 @@ enum ProjectStatus {
   COMPLETED
 }
 
+enum InputChannel {
+  EXCEL
+  TEXT
+  VOICE
+}
+
 model Project {
-  id                String        @id @default(cuid())
+  id                String           @id @default(cuid())
   name              String
-  code              String        @unique
+  code              String           @unique
   wbsCode           String
   department        String
   category          String
   location          String
-  description       String        @default("")
+  description       String           @default("")
   baselineStartDate DateTime
   baselineEndDate   DateTime
-  currentProgress   Float         @default(0)
-  plannedProgress   Float         @default(0)
-  status            ProjectStatus @default(ON_TRACK)
+  currentProgress   Float            @default(0)
+  plannedProgress   Float            @default(0)
+  status            ProjectStatus    @default(ON_TRACK)
   budget            String
   spent             String
   supervisor        String
   contractor        String
   userId            String?
-  user              User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  user              User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  timelineData      TimelinePoint[]
+  recentUpdates     ActivityUpdate[]
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([userId])
   @@index([status])
   @@index([department])
   @@map("project")
+}
+
+model ActivityUpdate {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  author        String
+  role          String
+  channel       InputChannel
+  notes         String
+  progressDelta Float        @default(0)
+  tags          String[]     @default([])
+  timestamp     DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+
+  @@index([projectId])
+  @@map("activity_update")
+}
+
+model TimelinePoint {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  date            String
+  plannedProgress Float
+  actualProgress  Float
+  milestone       String?
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+  @@map("timeline_point")
 }
