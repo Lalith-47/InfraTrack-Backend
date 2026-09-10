@@ -13,6 +13,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { meRouter } from "./routes/me.js";
 import { projectsRouter } from "./routes/projects.js";
 import { dashboardRouter } from "./routes/dashboard.js";
+import { usersRouter } from "./routes/users.js";
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/me", meRouter);
 app.use("/api/projects", projectsRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/admin/users", usersRouter);
 
 // Centralized Error Handler
 app.use(errorHandler);
