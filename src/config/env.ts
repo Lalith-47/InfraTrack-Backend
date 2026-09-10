@@ -6,29 +6,22 @@ dotenv.config();
 
 const envSchema = z.object({
   DATABASE_URL: z
-    .string({
-      required_error: "DATABASE_URL is required. Provide a PostgreSQL connection string.",
-    })
-    .min(1, "DATABASE_URL cannot be empty"),
+    .string()
+    .min(1, "DATABASE_URL is required. Provide a PostgreSQL connection string."),
   BETTER_AUTH_SECRET: z
-    .string({
-      required_error: "BETTER_AUTH_SECRET is required. Provide a secret key for session encryption.",
-    })
+    .string()
     .min(16, "BETTER_AUTH_SECRET must be at least 16 characters long"),
   BETTER_AUTH_URL: z
-    .string({
-      required_error: "BETTER_AUTH_URL is required (e.g. http://localhost:4000).",
-    })
+    .string()
     .url("BETTER_AUTH_URL must be a valid URL"),
   FRONTEND_URL: z
-    .string({
-      required_error: "FRONTEND_URL is required for CORS origin (e.g. http://localhost:3000).",
-    })
+    .string()
     .url("FRONTEND_URL must be a valid URL"),
   GITHUB_CLIENT_ID: z.string().optional().default(""),
   GITHUB_CLIENT_SECRET: z.string().optional().default(""),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
+  BETTER_AUTH_API_KEY: z.string().optional().default("ba_6c8u5hsfwyk7ghnizcv9mymu7jx9utlj"),
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
