@@ -27,18 +27,24 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });
 
-const parsed = envSchema.safeParse(process.env);
+let parsedEnv: z.infer<typeof envSchema>;
 
-if (!parsed.success) {
-  console.error("❌ Invalid environment variables configuration at boot:");
-  const errors = parsed.error.format();
-  for (const [key, value] of Object.entries(errors)) {
-    if (key !== "_errors" && value && "_errors" in value && (value as { _errors: string[] })._errors.length > 0) {
-      console.error(`   - ${key}: ${(value as { _errors: string[] })._errors.join(", ")}`);
+try {
+  parsedEnv = envSchema.parse(process.env);
+} catch (error) {
+  if (error instanceof z.ZodError) {
+    console.error("❌ Invalid environment variables configuration at boot:");
+    const errors = error.format();
+    for (const [key, value] of Object.entries(errors)) {
+      if (key !== "_errors" && value && "_errors" in value && (value as { _errors: string[] })._errors.length > 0) {
+        console.error(`   - ${key}: ${(value as { _errors: string[] })._errors.join(", ")}`);
+      }
     }
+  } else {
+    console.error("❌ Unknown error loading environment variables:", error);
   }
   process.exit(1);
 }
 
-export const env = parsed.data;
+export const env = parsedEnv;
 export type Env = z.infer<typeof envSchema>;
