@@ -22,6 +22,7 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
   BETTER_AUTH_API_KEY: z.string().optional().default("ba_6c8u5hsfwyk7ghnizcv9mymu7jx9utlj"),
+  OPENAI_API_KEY: z.string().optional().default(""),
   PORT: z.coerce.number().default(4000),
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 });

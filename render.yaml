@@ -1,42 +1,24 @@
 services:
-  # Web Service for Node.js Express Backend
   - type: web
-    name: sih2026-backend
+    name: infratrack-backend
     runtime: node
     plan: free
     region: oregon
-    rootDir: backend
-    buildCommand: npm install && npm run build && npx prisma migrate deploy
-    startCommand: npm start
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 4000
-      - key: DATABASE_URL
-        fromDatabase:
-          name: sih2026-postgres
-          property: connectionString
+        value: "10000"
       - key: BETTER_AUTH_SECRET
         generateValue: true
       - key: BETTER_AUTH_URL
-        sync: false # Set in Render Dashboard (e.g. https://sih2026-backend.onrender.com)
+        sync: false
       - key: FRONTEND_URL
-        sync: false # Set in Render Dashboard (e.g. https://sih2026.vercel.app or frontend on Render)
-      - key: GITHUB_CLIENT_ID
         sync: false
-      - key: GITHUB_CLIENT_SECRET
+      - key: DATABASE_URL
         sync: false
-      - key: GOOGLE_CLIENT_ID
+      - key: OPENAI_API_KEY
         sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-
-databases:
-  # Managed PostgreSQL Database
-  - name: sih2026-postgres
-    plan: free
-    region: oregon
-    databaseName: sih2026
-    user: sih2026_user
