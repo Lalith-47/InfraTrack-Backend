@@ -10,7 +10,7 @@ export const auth = betterAuth({
   }),
   plugins: [
     dash({
-      apiKey: env.BETTER_AUTH_API_KEY,
+      apiKey: process.env.BETTER_AUTH_API_KEY || env.BETTER_AUTH_API_KEY,
     }),
   ],
   user: {
