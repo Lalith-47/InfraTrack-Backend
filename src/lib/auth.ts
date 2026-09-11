@@ -17,6 +17,8 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   trustedOrigins: [
     env.FRONTEND_URL,
+    "https://sih2026-beige.vercel.app",
+    "https://sih2026.vercel.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
   ],

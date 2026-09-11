@@ -28,39 +28,47 @@ app.use(
   })
 );
 
-// CORS configuration (Allow localhost and 127.0.0.1 origins with credentials)
-const allowedOrigins = [
-  env.FRONTEND_URL,
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-];
+// Robust CORS configuration supporting Vercel production, preview deployments, and local dev
+const isAllowedOrigin = (origin?: string): boolean => {
+  if (!origin) return true; // Allow non-browser requests (mobile, curl, health checks)
+  if (origin === env.FRONTEND_URL) return true;
+  if (origin === "https://sih2026-beige.vercel.app") return true;
+  if (origin === "https://sih2026.vercel.app") return true;
+  if (origin.endsWith(".vercel.app")) return true;
+  if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return true;
+  return false;
+};
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps, curl, health checks) or matching frontend
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS policy does not allow access from origin: ${origin}`));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: [
-      "Content-Type",
-      "Authorization",
-      "Cookie",
-      "X-Requested-With",
-      "X-Visitor-Id",
-      "X-Request-Id",
-      "x-visitor-id",
-      "x-request-id",
-      "better-auth-client",
-    ],
-    exposedHeaders: ["Set-Cookie"],
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (isAllowedOrigin(origin)) {
+      callback(null, true);
+    } else {
+      // Allow without throwing 500
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "Cookie",
+    "X-Requested-With",
+    "X-Visitor-Id",
+    "X-Request-Id",
+    "x-visitor-id",
+    "x-request-id",
+    "better-auth-client",
+    "Accept",
+    "Origin",
+  ],
+  exposedHeaders: ["Set-Cookie"],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // Request Logging
 app.use(
