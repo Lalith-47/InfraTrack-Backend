@@ -37,7 +37,9 @@ export const auth = betterAuth({
     accountLinking: {
       enabled: true,
       trustedProviders: ["google", "microsoft"],
+      requireLocalEmailVerified: false,
     },
+    updateAccountOnSignIn: true,
     skipStateCookieCheck: true,
   },
   onAPIError: {
@@ -48,12 +50,16 @@ export const auth = betterAuth({
       clientId: env.GOOGLE_CLIENT_ID || "google_dev_client_id",
       clientSecret: env.GOOGLE_CLIENT_SECRET || "google_dev_client_secret",
       enabled: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+      disableImplicitSignUp: true,
+      overrideUserInfoOnSignIn: true,
     },
     microsoft: {
       clientId: env.MICROSOFT_CLIENT_ID || "microsoft_dev_client_id",
       clientSecret: env.MICROSOFT_CLIENT_SECRET || "microsoft_dev_client_secret",
       tenantId: env.MICROSOFT_TENANT_ID || "common",
       enabled: Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
+      disableImplicitSignUp: true,
+      overrideUserInfoOnSignIn: true,
     },
   },
   advanced: {

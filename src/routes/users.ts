@@ -5,6 +5,8 @@ import { auth } from "../lib/auth.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/rbac.js";
 
+import crypto from "crypto";
+
 export const usersRouter = Router();
 
 // Strict RBAC: All user management endpoints require authenticated ADMIN role
@@ -14,7 +16,7 @@ usersRouter.use(requireRole(["ADMIN"]));
 const createUserSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters").optional(),
   role: z.enum(["ADMIN", "SUPERVISOR", "VIEWER"]).default("VIEWER"),
 });
 
@@ -58,7 +60,8 @@ usersRouter.post("/", async (req: Request, res: Response) => {
       return;
     }
 
-    const { name, email, password, role } = parsed.data;
+    const { name, email, role } = parsed.data;
+    const effectivePassword = parsed.data.password || `Auth_${crypto.randomBytes(8).toString("hex")}!9A`;
 
     // Check if email already exists
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -71,7 +74,7 @@ usersRouter.post("/", async (req: Request, res: Response) => {
     const authRes = await auth.api.signUpEmail({
       body: {
         email,
-        password,
+        password: effectivePassword,
         name,
       },
     });
@@ -81,10 +84,10 @@ usersRouter.post("/", async (req: Request, res: Response) => {
       return;
     }
 
-    // Assign the designated role specified by the Admin
+    // Assign the designated role specified by the Admin and ensure verified for OAuth linking
     const updatedUser = await prisma.user.update({
       where: { id: authRes.user.id },
-      data: { role },
+      data: { role, emailVerified: true },
       select: {
         id: true,
         name: true,
