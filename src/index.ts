@@ -88,15 +88,18 @@ app.use(
 // Render Health Check (Zero-auth, 200 OK)
 app.get("/health", async (_req, res) => {
   let dbStatus = "connected";
+  let dbError: string | undefined = undefined;
   try {
     await prisma.$queryRaw`SELECT 1`;
-  } catch (error) {
+  } catch (error: any) {
     dbStatus = "pending_configuration";
+    dbError = error?.message || String(error);
   }
   res.status(200).json({
     status: "ok",
     service: "infratrack-backend",
     database: dbStatus,
+    dbError,
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
