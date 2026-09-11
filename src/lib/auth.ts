@@ -33,14 +33,27 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  socialProviders: {
-    github: {
-      clientId: env.GITHUB_CLIENT_ID || "github_dev_client_id",
-      clientSecret: env.GITHUB_CLIENT_SECRET || "github_dev_client_secret",
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "microsoft"],
     },
+    skipStateCookieCheck: true,
+  },
+  onAPIError: {
+    errorURL: `${env.FRONTEND_URL}/login`,
+  },
+  socialProviders: {
     google: {
       clientId: env.GOOGLE_CLIENT_ID || "google_dev_client_id",
       clientSecret: env.GOOGLE_CLIENT_SECRET || "google_dev_client_secret",
+      enabled: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+    },
+    microsoft: {
+      clientId: env.MICROSOFT_CLIENT_ID || "microsoft_dev_client_id",
+      clientSecret: env.MICROSOFT_CLIENT_SECRET || "microsoft_dev_client_secret",
+      tenantId: env.MICROSOFT_TENANT_ID || "common",
+      enabled: Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
     },
   },
   advanced: {

@@ -85,6 +85,15 @@ app.use(
   })
 );
 
+// Root route - redirect to frontend app or login on OAuth callback errors
+app.get("/", (req, res) => {
+  const error = req.query.error;
+  if (error) {
+    return res.redirect(`${env.FRONTEND_URL}/login?error=${encodeURIComponent(String(error))}`);
+  }
+  return res.redirect(env.FRONTEND_URL);
+});
+
 // Render Health Check (Zero-auth, 200 OK)
 app.get("/health", async (_req, res) => {
   let dbStatus = "connected";

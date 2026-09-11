@@ -23,10 +23,11 @@ Production-ready, standalone TypeScript backend powered by Express, Prisma (Post
 | `FRONTEND_URL` | Yes | Allowed frontend origin for CORS and OAuth redirects | `http://localhost:3000` |
 | `PORT` | No (default 4000) | Port for the Express server | `4000` |
 | `NODE_ENV` | No (default dev) | `development` \| `production` \| `test` | `development` |
-| `GITHUB_CLIENT_ID` | Optional | GitHub OAuth Application Client ID | `Ov23li...` |
-| `GITHUB_CLIENT_SECRET` | Optional | GitHub OAuth Application Client Secret | `4f82a...` |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth 2.0 Client ID | `123456...apps.googleusercontent.com` |
 | `GOOGLE_CLIENT_SECRET` | Optional | Google OAuth 2.0 Client Secret | `GOCSPX-...` |
+| `MICROSOFT_CLIENT_ID` | Optional | Microsoft Entra ID / Azure App (Client) ID | `00000000-0000-0000-0000-000000000000` |
+| `MICROSOFT_CLIENT_SECRET` | Optional | Microsoft Entra ID Client Secret Value | `abc~...` |
+| `MICROSOFT_TENANT_ID` | Optional | Microsoft Entra ID Tenant ID (default: `common`) | `common` |
 
 ---
 
