@@ -247,6 +247,7 @@ projectsRouter.post(
         message: "Progress update recorded successfully",
         activity: newActivity,
         currentProgress: updatedProject.currentProgress,
+        project: updatedProject,
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to record field update" });

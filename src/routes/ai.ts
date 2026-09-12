@@ -521,10 +521,15 @@ aiRouter.post("/vision-estimate", optionalAuth, async (req: Request, res: Respon
     }
 
     // Prepare clean Base64 data URL
+    let mime = imageMime || "image/jpeg";
+    const mimeMatch = imageBase64.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,/);
+    if (mimeMatch) {
+      mime = mimeMatch[1];
+    }
     const cleanBase64 = imageBase64.includes("base64,")
       ? imageBase64.split("base64,")[1]
       : imageBase64;
-    const dataUrl = `data:${imageMime};base64,${cleanBase64}`;
+    const dataUrl = `data:${mime};base64,${cleanBase64}`;
 
     // Call OpenAI GPT-4o Vision if key is configured, otherwise fall back to heuristic
     const hasOpenAIKey = Boolean(env.OPENAI_API_KEY && env.OPENAI_API_KEY.trim().startsWith("sk-"));
@@ -535,6 +540,9 @@ aiRouter.post("/vision-estimate", optionalAuth, async (req: Request, res: Respon
       res.json({
         status: "success",
         provider: "heuristic-telemetry-engine",
+        model: "heuristic-telemetry-engine",
+        isAiAnalyzed: false,
+        analyzedAt: new Date().toISOString(),
         note: "OpenAI Vision not configured. Showing heuristic estimate from live project telemetry.",
         result: heuristic,
       });
@@ -611,6 +619,9 @@ You MUST respond with a STRICT, VALID JSON OBJECT ONLY (no markdown fences, no e
       res.json({
         status: "success",
         provider: "heuristic-telemetry-engine",
+        model: "heuristic-telemetry-engine",
+        isAiAnalyzed: false,
+        analyzedAt: new Date().toISOString(),
         note: "AI Vision could not parse the image clearly. Showing heuristic estimate from live project telemetry.",
         result: heuristic,
       });
@@ -627,6 +638,9 @@ You MUST respond with a STRICT, VALID JSON OBJECT ONLY (no markdown fences, no e
       res.json({
         status: "success",
         provider: "heuristic-telemetry-engine",
+        model: "heuristic-telemetry-engine",
+        isAiAnalyzed: false,
+        analyzedAt: new Date().toISOString(),
         note: "AI Vision response could not be parsed. Showing heuristic estimate from live project telemetry.",
         result: heuristic,
       });
@@ -636,6 +650,9 @@ You MUST respond with a STRICT, VALID JSON OBJECT ONLY (no markdown fences, no e
     res.json({
       status: "success",
       provider: "openai-gpt4o-vision",
+      model: "gpt-4o",
+      isAiAnalyzed: true,
+      analyzedAt: new Date().toISOString(),
       result: parsedResult,
     });
   } catch (error: any) {
