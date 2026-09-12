@@ -31,20 +31,20 @@ Production-ready, standalone TypeScript backend powered by Express, Prisma (Post
 
 ---
 
-## 3. Seeded Accounts & Credentials for Testing / Audit
-
-| Email | Password | Role | Permissions |
-|---|---|---|---|
-| `admin@infra.gov.in` | `Password123!` | `ADMIN` | Global portfolio access, project creation (`POST /api/projects`), field updates, role simulation |
-| `supervisor@infra.gov.in` | `Password123!` | `SUPERVISOR` | Assigned project access, field updates (`POST /api/projects/:id/updates` via Excel, Text, Voice) |
-| `viewer@infra.gov.in` | `Password123!` | `VIEWER` | Read-only access to all dashboards, S-Curves, and telemetry feeds. (Mutations blocked with `403 Forbidden`) |
-
+## 3. Officer Accounts & Role Matrix
+ 
+| Email | Role | Permissions |
+|---|---|---|
+| `admin@infra.gov.in` | `ADMIN` | Global portfolio access, project creation (`POST /api/projects`), field updates, user access control |
+| `supervisor@infra.gov.in` | `SUPERVISOR` | Assigned project access, field updates (`POST /api/projects/:id/updates` via Excel, Text, Voice) |
+| `viewer@infra.gov.in` | `VIEWER` | Read-only access to all dashboards, S-Curves, and telemetry feeds. (Mutations blocked with `403 Forbidden`) |
+ 
 ---
-
+ 
 ## 4. Complete API Endpoint Matrix
-
+ 
 ### 4.1 System & Health
-
+ 
 #### `GET /health`
 - **Auth Requirement**: Public (no auth required)
 - **Description**: Render uptime and container health probe.
@@ -56,32 +56,32 @@ Production-ready, standalone TypeScript backend powered by Express, Prisma (Post
     "uptime": 124.5
   }
   ```
-
+ 
 ---
-
+ 
 ### 4.2 Authentication (`/api/auth/*`)
-
+ 
 Handled natively by Better Auth with session cookies (`credentials: "include"`).
-
+ 
 #### `POST /api/auth/sign-up/email`
 - **Auth Requirement**: Public
 - **Request Body**:
   ```json
   {
     "email": "engineer@infra.gov.in",
-    "password": "Password123!",
+    "password": "<secure_password>",
     "name": "Er. Arvind Kumar"
   }
   ```
 - **Response `200 OK`**: User profile with `Set-Cookie` session header. New accounts default to `SUPERVISOR` role.
-
+ 
 #### `POST /api/auth/sign-in/email`
 - **Auth Requirement**: Public
 - **Request Body**:
   ```json
   {
-    "email": "admin@infra.gov.in",
-    "password": "Password123!"
+    "email": "officer@infra.gov.in",
+    "password": "<secure_password>"
   }
   ```
 - **Response `200 OK`**: User profile with active session cookie.

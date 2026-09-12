@@ -8,6 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/index.js",
+    "create-admin": "tsx src/scripts/create-admin.ts",
+    "clear-users": "tsx src/scripts/clear-users.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy"

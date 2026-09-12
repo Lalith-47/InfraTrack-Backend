@@ -50,14 +50,18 @@ meRouter.patch("/role", requireAuth, async (req: Request, res: Response) => {
     }
 
     // Security Rule: Users cannot self-promote to ADMIN unless they are already an ADMIN
+    // (Or initial system bootstrap: if 0 admins exist in database, the first user is granted ADMIN)
     if (parsed.data.role === "ADMIN") {
       const dbUser = await prisma.user.findUnique({ where: { id: req.user?.id } });
       if (dbUser?.role !== "ADMIN") {
-        res.status(403).json({
-          error: "Forbidden",
-          message: "Registration or self-promotion to ADMIN is strictly restricted. Only an existing Administrator can provision an Admin account.",
-        });
-        return;
+        const existingAdminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+        if (existingAdminCount > 0) {
+          res.status(403).json({
+            error: "Forbidden",
+            message: "Registration or self-promotion to ADMIN is strictly restricted. Only an existing Administrator can provision an Admin account.",
+          });
+          return;
+        }
       }
     }
 

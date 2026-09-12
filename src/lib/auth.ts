@@ -1,6 +1,5 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { dash } from "@better-auth/infra";
 import { prisma } from "./prisma.js";
 import { env } from "../config/env.js";
 
@@ -8,11 +7,6 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  plugins: [
-    dash({
-      apiKey: process.env.BETTER_AUTH_API_KEY || env.BETTER_AUTH_API_KEY,
-    }),
-  ],
   user: {
     additionalFields: {
       role: {
@@ -23,14 +17,20 @@ export const auth = betterAuth({
   },
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
-  trustedOrigins: [
-    env.FRONTEND_URL,
-    "https://sih2026-beige.vercel.app",
-    "https://sih2026.vercel.app",
-    "https://*.vercel.app",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-  ],
+  trustedOrigins: (request) => {
+    const origin = request?.headers?.get("origin") || request?.headers?.get("referer") || null;
+    const origins: string[] = [
+      env.FRONTEND_URL,
+      "https://sih2026-beige.vercel.app",
+      "https://sih2026.vercel.app",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ];
+    if (origin && !origins.includes(origin)) {
+      origins.push(origin);
+    }
+    return origins;
+  },
   emailAndPassword: {
     enabled: true,
   },

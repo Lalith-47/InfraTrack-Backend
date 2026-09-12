@@ -25,6 +25,25 @@ const createProjectSchema = z.object({
   contractor: z.string().default("Unassigned"),
 });
 
+const updateProjectSchema = z.object({
+  name: z.string().min(3, "Project name must be at least 3 characters").optional(),
+  code: z.string().min(2, "Project code is required").optional(),
+  wbsCode: z.string().optional(),
+  department: z.string().optional(),
+  category: z.string().optional(),
+  location: z.string().optional(),
+  description: z.string().optional(),
+  baselineStartDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  baselineEndDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).optional(),
+  currentProgress: z.number().min(0).max(100).optional(),
+  plannedProgress: z.number().min(0).max(100).optional(),
+  status: z.enum(["ON_TRACK", "AT_RISK", "DELAYED", "COMPLETED"]).optional(),
+  budget: z.string().optional(),
+  spent: z.string().optional(),
+  supervisor: z.string().optional(),
+  contractor: z.string().optional(),
+});
+
 const postUpdateSchema = z.object({
   channel: z.enum(["EXCEL", "TEXT", "VOICE"]),
   notes: z.string().min(3, "Notes must be at least 3 characters long"),
@@ -36,7 +55,7 @@ const postUpdateSchema = z.object({
 // GET /api/projects - List projects from PostgreSQL (supports filtering & role scoping)
 projectsRouter.get("/", optionalAuth, async (req: Request, res: Response) => {
   try {
-    const { status, department, search, scope } = req.query;
+    const { status, department, search, scope, filter } = req.query;
 
     const where: Record<string, unknown> = {};
     if (status && typeof status === "string" && status !== "ALL") {
@@ -54,8 +73,10 @@ projectsRouter.get("/", optionalAuth, async (req: Request, res: Response) => {
       ];
     }
 
-    // Role-based scoping: if requested or supervisor user, filter to assigned
-    if (scope === "assigned" && req.user) {
+    // Role-based scoping: supervisor can view only their created projects when scope=mine or filter=mine
+    if ((scope === "mine" || filter === "mine") && req.user) {
+      where.userId = req.user.id;
+    } else if (scope === "assigned" && req.user) {
       const user = await prisma.user.findUnique({ where: { id: req.user.id } });
       if (user) {
         where.OR = [
@@ -254,3 +275,120 @@ projectsRouter.post(
     }
   }
 );
+
+// PATCH /api/projects/:id - Update Project Details (RBAC: ADMIN can update all; SUPERVISOR only projects they created)
+projectsRouter.patch(
+  "/:id",
+  requireAuth,
+  requireRole(["ADMIN", "SUPERVISOR"]),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const parseResult = updateProjectSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        res.status(400).json({
+          error: "Validation failed",
+          details: parseResult.error.flatten(),
+        });
+        return;
+      }
+
+      const existingProject = await prisma.project.findFirst({
+        where: { OR: [{ id }, { code: id }] },
+      });
+
+      if (!existingProject) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      // Supervisor Scoping Security Rule:
+      // Supervisors can ONLY update projects they have created.
+      if (req.user?.role === "SUPERVISOR" && existingProject.userId !== req.user.id) {
+        res.status(403).json({
+          error: "Forbidden",
+          message: "Chief Engineers / Supervisors are only authorized to update projects they have created.",
+        });
+        return;
+      }
+
+      const data = parseResult.data;
+      const updatePayload: Record<string, any> = {};
+
+      if (data.name !== undefined) updatePayload.name = data.name;
+      if (data.code !== undefined) updatePayload.code = data.code;
+      if (data.wbsCode !== undefined) updatePayload.wbsCode = data.wbsCode;
+      if (data.department !== undefined) updatePayload.department = data.department;
+      if (data.category !== undefined) updatePayload.category = data.category;
+      if (data.location !== undefined) updatePayload.location = data.location;
+      if (data.description !== undefined) updatePayload.description = data.description;
+      if (data.baselineStartDate !== undefined) updatePayload.baselineStartDate = new Date(data.baselineStartDate);
+      if (data.baselineEndDate !== undefined) updatePayload.baselineEndDate = new Date(data.baselineEndDate);
+      if (data.currentProgress !== undefined) updatePayload.currentProgress = data.currentProgress;
+      if (data.plannedProgress !== undefined) updatePayload.plannedProgress = data.plannedProgress;
+      if (data.status !== undefined) updatePayload.status = data.status;
+      if (data.budget !== undefined) updatePayload.budget = data.budget;
+      if (data.spent !== undefined) updatePayload.spent = data.spent;
+      if (data.supervisor !== undefined) updatePayload.supervisor = data.supervisor;
+      if (data.contractor !== undefined) updatePayload.contractor = data.contractor;
+
+      const updatedProject = await prisma.project.update({
+        where: { id: existingProject.id },
+        data: updatePayload,
+      });
+
+      res.json({
+        message: "Project details successfully updated in database",
+        project: updatedProject,
+      });
+    } catch (error: any) {
+      if (error?.code === "P2002") {
+        res.status(409).json({ error: "Project code already exists" });
+        return;
+      }
+      res.status(500).json({ error: "Failed to update project", message: error?.message });
+    }
+  }
+);
+
+// DELETE /api/projects/:id - Delete Project (RBAC: ADMIN can delete all; SUPERVISOR only projects they created)
+projectsRouter.delete(
+  "/:id",
+  requireAuth,
+  requireRole(["ADMIN", "SUPERVISOR"]),
+  async (req: Request, res: Response) => {
+    try {
+      const { id } = req.params;
+      const existingProject = await prisma.project.findFirst({
+        where: { OR: [{ id }, { code: id }] },
+      });
+
+      if (!existingProject) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      // Supervisor Scoping Security Rule:
+      // Supervisors can ONLY delete projects they have created.
+      if (req.user?.role === "SUPERVISOR" && existingProject.userId !== req.user.id) {
+        res.status(403).json({
+          error: "Forbidden",
+          message: "Chief Engineers / Supervisors are only authorized to delete projects they have created.",
+        });
+        return;
+      }
+
+      await prisma.project.delete({
+        where: { id: existingProject.id },
+      });
+
+      res.json({
+        message: "Project successfully deleted from database",
+        deletedId: existingProject.id,
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: "Failed to delete project", message: error?.message });
+    }
+  }
+);
+

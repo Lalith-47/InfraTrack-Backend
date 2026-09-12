@@ -5,22 +5,23 @@ async function main() {
   console.log("🌱 Starting PostgreSQL database seed for SIH 2026...");
 
   // 1. Seed Users for each role
+  const defaultPassword = process.env.SEED_DEFAULT_PASSWORD || "Password123!";
   const seedUsers = [
     {
-      email: "admin@infra.gov.in",
-      password: "Password123!",
+      email: process.env.SEED_ADMIN_EMAIL || "admin@infra.gov.in",
+      password: process.env.SEED_ADMIN_PASSWORD || defaultPassword,
       name: "Dr. A. K. Sharma (Ministry Director)",
       role: "ADMIN" as const,
     },
     {
-      email: "supervisor@infra.gov.in",
-      password: "Password123!",
+      email: process.env.SEED_SUPERVISOR_EMAIL || "supervisor@infra.gov.in",
+      password: process.env.SEED_SUPERVISOR_PASSWORD || defaultPassword,
       name: "Er. Rajesh Verma (Chief Engineer)",
       role: "SUPERVISOR" as const,
     },
     {
-      email: "viewer@infra.gov.in",
-      password: "Password123!",
+      email: process.env.SEED_VIEWER_EMAIL || "viewer@infra.gov.in",
+      password: process.env.SEED_VIEWER_PASSWORD || defaultPassword,
       name: "Smt. Sunita Rao (Audit Officer)",
       role: "VIEWER" as const,
     },

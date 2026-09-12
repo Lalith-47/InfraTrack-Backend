@@ -28,7 +28,7 @@ app.use(
   })
 );
 
-// Robust CORS configuration supporting Vercel production, preview deployments, and local dev
+// Robust CORS configuration supporting Vercel production, preview deployments, LAN devices, and local dev
 const isAllowedOrigin = (origin?: string): boolean => {
   if (!origin) return true; // Allow non-browser requests (mobile, curl, health checks)
   if (origin === env.FRONTEND_URL) return true;
@@ -36,6 +36,8 @@ const isAllowedOrigin = (origin?: string): boolean => {
   if (origin === "https://sih2026.vercel.app") return true;
   if (origin.endsWith(".vercel.app")) return true;
   if (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:")) return true;
+  // Allow LAN private network addresses (e.g., 192.168.x.x, 10.x.x.x, 172.16-31.x.x) for multi-device access
+  if (/^https?:\/\/(192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+)(:\d+)?$/.test(origin)) return true;
   return false;
 };
 
