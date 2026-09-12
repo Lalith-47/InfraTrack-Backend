@@ -3,10 +3,15 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma.js";
 import { env } from "../config/env.js";
 
+import { bearer } from "better-auth/plugins";
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
+  plugins: [
+    bearer(),
+  ],
   user: {
     additionalFields: {
       role: {
@@ -69,6 +74,7 @@ export const auth = betterAuth({
     defaultCookieAttributes: {
       sameSite: env.NODE_ENV === "production" ? "none" : "lax",
       secure: env.NODE_ENV === "production",
+      partitioned: env.NODE_ENV === "production",
       httpOnly: true,
     },
   },

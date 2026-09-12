@@ -25,6 +25,7 @@ app.set("trust proxy", 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginOpenerPolicy: false,
   })
 );
 
@@ -65,7 +66,7 @@ const corsOptions: cors.CorsOptions = {
     "Accept",
     "Origin",
   ],
-  exposedHeaders: ["Set-Cookie"],
+  exposedHeaders: ["Set-Cookie", "set-auth-token"],
   optionsSuccessStatus: 204,
 };
 
