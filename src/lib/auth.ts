@@ -17,7 +17,7 @@ export const auth = betterAuth({
     additionalFields: {
       role: {
         type: "string",
-        defaultValue: "VIEWER",
+        defaultValue: "SUPERVISOR",
       },
     },
   },
@@ -27,6 +27,7 @@ export const auth = betterAuth({
     env.FRONTEND_URL,
     "https://sih2026-beige.vercel.app",
     "https://sih2026.vercel.app",
+    "https://*.vercel.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
   ],
@@ -50,7 +51,7 @@ export const auth = betterAuth({
       clientId: env.GOOGLE_CLIENT_ID || "google_dev_client_id",
       clientSecret: env.GOOGLE_CLIENT_SECRET || "google_dev_client_secret",
       enabled: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
-      disableImplicitSignUp: true,
+      disableImplicitSignUp: false,
       overrideUserInfoOnSignIn: true,
     },
     microsoft: {
@@ -58,7 +59,7 @@ export const auth = betterAuth({
       clientSecret: env.MICROSOFT_CLIENT_SECRET || "microsoft_dev_client_secret",
       tenantId: env.MICROSOFT_TENANT_ID || "common",
       enabled: Boolean(env.MICROSOFT_CLIENT_ID && env.MICROSOFT_CLIENT_SECRET),
-      disableImplicitSignUp: true,
+      disableImplicitSignUp: false,
       overrideUserInfoOnSignIn: true,
     },
   },
