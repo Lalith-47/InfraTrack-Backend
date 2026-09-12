@@ -713,3 +713,83 @@ aiRouter.post("/audio-transcribe", optionalAuth, async (req: Request, res: Respo
     res.status(500).json({ error: error?.message || "Failed to transcribe audio with OpenAI Whisper" });
   }
 });
+
+
+// ----------------------------------------------------------------------------
+// 4. POST /api/ai/text-to-speech - OpenAI TTS Speech Synthesis
+// ----------------------------------------------------------------------------
+const ttsSchema = z.object({
+  text: z.string().min(1, "Text is required").max(4096, "Text exceeds maximum character limit of 4096 characters"),
+  voice: z.enum(["alloy", "echo", "fable", "onyx", "nova", "shimmer"]).optional().default("nova"),
+  speed: z.number().min(0.25).max(4.0).optional().default(1.0),
+});
+
+aiRouter.post("/text-to-speech", optionalAuth, async (req: Request, res: Response) => {
+  try {
+    const parsed = ttsSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid text-to-speech payload", details: parsed.error.flatten() });
+      return;
+    }
+
+    if (!env.OPENAI_API_KEY || !env.OPENAI_API_KEY.trim().startsWith("sk-")) {
+      res.status(500).json({ error: "OpenAI API key is not configured on the backend server." });
+      return;
+    }
+
+    const { text, voice, speed } = parsed.data;
+
+    // Clean markdown and formatting artifacts to produce natural spoken speech
+    const cleanSpeechText = text
+      .replace(/```[\s\S]*?```/g, "Code block omitted.") // omit complex code blocks
+      .replace(/`([^`]+)`/g, "$1")                         // inline code
+      .replace(/#{1,6}\s+/g, "")                          // headings
+      .replace(/\*\*([^*]+)\*\*/g, "$1")                  // bold
+      .replace(/\*([^*]+)\*/g, "$1")                      // italics
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")            // markdown links
+      .replace(/^\s*[-*+]\s+/gm, "")                      // bullet points
+      .replace(/\|.*?\|/g, "")                            // table markup
+      .replace(/\n{2,}/g, "\n")                           // collapse excessive newlines
+      .trim()
+      .slice(0, 4096);
+
+    if (!cleanSpeechText) {
+      res.status(400).json({ error: "Text contains no readable content after sanitization" });
+      return;
+    }
+
+    const openai = new OpenAI({ apiKey: env.OPENAI_API_KEY.trim() });
+
+    const mp3Response = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: voice,
+      input: cleanSpeechText,
+      speed: speed,
+    });
+
+    const arrayBuffer = await mp3Response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // If client requested direct audio stream
+    if (req.headers.accept && req.headers.accept.includes("audio/mpeg")) {
+      res.setHeader("Content-Type", "audio/mpeg");
+      res.setHeader("Content-Length", buffer.length);
+      res.end(buffer);
+      return;
+    }
+
+    // Default: Return JSON with base64 audio
+    res.json({
+      status: "success",
+      provider: "openai-tts-1",
+      voice: voice,
+      mimeType: "audio/mpeg",
+      audioBase64: buffer.toString("base64"),
+      charCount: cleanSpeechText.length,
+    });
+  } catch (error: any) {
+    logger.error({ error }, "Error generating speech with OpenAI TTS");
+    res.status(500).json({ error: error?.message || "Failed to generate speech with OpenAI TTS" });
+  }
+});
+
